@@ -6,11 +6,14 @@ import DeleteConfirmation from "./components/DeleteConfirmation.jsx";
 import logoImg from "./assets/logo.png";
 import AvailablePlaces from "./components/AvailablePlaces.jsx";
 import { updateUserPlaces } from "./http.js";
+import Error from "./components/Error.jsx";
 
 function App() {
   const selectedPlace = useRef();
 
   const [userPlaces, setUserPlaces] = useState([]);
+
+  const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState();
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
@@ -40,7 +43,14 @@ function App() {
       //updated state version
       await updateUserPlaces([selectedPlace, ...userPlaces]);
     } catch (error) {
-      //error catch code
+      //we are sending the data to the server. If anything goes wrong with it
+      //we roll back to the previous userPlaces state. Doing so, we avoid adding
+      //a loading state to wait the result of the POST request ("Optimistic updating")
+      setUserPlaces(userPlaces);
+
+      setErrorUpdatingPlaces({
+        message: error.message || "Failed to update places.",
+      });
     }
   }
 
@@ -52,8 +62,27 @@ function App() {
     setModalIsOpen(false);
   }, []);
 
+  function handleError() {
+    setErrorUpdatingPlaces(null);
+  }
+
   return (
     <>
+      {/* The onClose will trigger the handleError function if the modal is closed by pressing the ESC key */}
+      <Modal open={errorUpdatingPlaces} onClose={handleError}>
+        {/* The Modal content will only be placed there if errorUpdatingPlaces is truthy. 
+            Otherwise, it will try to access to the .message property which is undefined in case 
+            errorUpdatingPlaces is null
+         */}
+        {errorUpdatingPlaces && (
+          <Error
+            title="An error ocurred!"
+            message={errorUpdatingPlaces.message}
+            onConfirm={handleError}
+          />
+        )}
+        ;
+      </Modal>
       <Modal open={modalIsOpen} onClose={handleStopRemovePlace}>
         <DeleteConfirmation
           onCancel={handleStopRemovePlace}
